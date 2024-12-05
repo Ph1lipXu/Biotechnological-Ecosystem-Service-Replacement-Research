@@ -1,4 +1,3 @@
-# Imports
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +14,6 @@ def createTfidfMatrix(keywords):
     tfidf_matrix = vectorizer.fit_transform(keywords).toarray()
     return tfidf_matrix
 
-# Function to create Similarity Matrix based on Cosine Similarity
 def createSimilarityMatrix(tfidf_matrix, keywords):
     # Calculate Cosine Similarity between each pair of abstracts
     semantic_similarity = cosine_similarity(tfidf_matrix)
@@ -27,7 +25,7 @@ def createSimilarityMatrix(tfidf_matrix, keywords):
 
     return semantic_similarity
 
-def createDendrogram(similarityMatrix, keywords, suitability_labels, outputDirectory):
+def createDendrogram(data, similarityMatrix, keywords, suitability_labels, outputDirectory):
     """
     Create a dendrogram based on semantic similarity of abstracts.
 
@@ -40,12 +38,13 @@ def createDendrogram(similarityMatrix, keywords, suitability_labels, outputDirec
     # Perform Hierarchical Clustering
     linkage_matrix = linkage(similarityMatrix, method='ward')
     
+    indices = [entry[0] for entry in data]
     # Create labels with suitability information
-    labeled_keywords = [f"{keyword} ({label})" for keyword, label in zip(keywords, suitability_labels)]
+    labeled_indices = [f"{label}, {index}" for label, index in zip(suitability_labels, indices)]
     
     # Create Dendrogram Plot
-    plt.figure(figsize=(12, 8))
-    dendrogram(linkage_matrix, labels=labeled_keywords)
+    plt.figure(figsize=(12, 10))
+    dendrogram(linkage_matrix, labels=labeled_indices)
     
     # Customize the plot
     plt.title("Dendrogram of Abstracts with Suitability Labels")

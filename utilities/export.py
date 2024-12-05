@@ -18,10 +18,9 @@ def saveToCSV(data, answerAndAnalysis, rows, outputDirectory):
     # Append Suitability, Confidence, and Keyword to Each Row
     for i in range(rows):
         try:
-            authors = data[i][1] + " et al."  # Corrected authors field
             newRow = [
                 data[i][0],  # Index
-                authors,  # Authors
+                data[i][1],  # Authors
                 data[i][2],  # Article Title
                 data[i][3],  # Publication Year
                 data[i][4],  # Abstract

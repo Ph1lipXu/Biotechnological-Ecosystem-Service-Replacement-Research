@@ -1,25 +1,15 @@
-# Imports
-from g4f.client import Client
-from g4f.Provider import (
-    Aichat,
-    Bing,
-    OpenaiChat,
-    You,
-    Yqcloud,
-)
+import openai
+import os
 
-# Asyncio Fix
-import asyncio
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Format Text
 def formatText(text):
     cleanedText = text.replace("*", "").lower()
     return cleanedText
-    
+
 # Get AI Response
 def askGPT(abstract):
-    client = Client()
     prompt = f"""Given this abstract for a research paper, would this article be suitable for biotechnological ecosystem service replacement research: {abstract}.
 
                 Suitability is determined by whether the paper discusses technologies, methods, or approaches that could feasibly replace natural soil formation processes. 
@@ -35,8 +25,14 @@ def askGPT(abstract):
                 Biochar
                 """
 
-    response = client.chat.completions.create(
-        model="gpt-4", 
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return formatText(response.choices[0].message.content)
+    try:
+        # Make the request to the OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        # Extract and format the response
+        return formatText(response['choices'][0]['message']['content'])
+    except Exception as e:
+        print(f"Error: {e}")
+        return None

@@ -2,6 +2,7 @@
 import os
 import sys
 import time
+import g4f
 from utilities.retrieve import getData
 from utilities.gpt import askGPT
 from utilities.export import saveToCSV
@@ -77,8 +78,6 @@ if(GPT):
         fill = int(bar * progress // 100)
         bar = '█' * fill + '-' * (bar - fill)
 
-        # Clear Terminal and Print Progress Bar
-        # sys.stdout.write("\033[F")
         print(f'Processing: |{bar}| {progress}% Complete')
 
     print("Processing Complete!\n")
@@ -103,4 +102,4 @@ if NUM > 1:
     similarityMatrix = createSimilarityMatrix(tfidf_matrix, shortened_keywords)
         
     # Create Dendrogram
-    createDendrogram(similarityMatrix, shortened_keywords, suitability_labels, outputDirectory)
+    createDendrogram(data, similarityMatrix, shortened_keywords, suitability_labels, outputDirectory)
