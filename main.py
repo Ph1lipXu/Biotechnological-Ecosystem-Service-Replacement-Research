@@ -1,15 +1,16 @@
 # Import
 import os
 import sys
+import time
 from utilities.retrieve import getData
 from utilities.gpt import askGPT
+from utilities.export import saveToCSV
 from utilities.words import getWords
 from utilities.words import countWords
 from utilities.graphs import createOccupancyMatrix
-from utilities.graphs import createScatterPlot
-from utilities.graphs import createSimilarityMatrix
 from utilities.graphs import createDendrogram
-from utilities.export import saveToCSV
+from utilities.graphs import createSimilarityMatrix
+from transformers import BertTokenizer, BertModel
 
 # Supress Warnings
 import warnings
@@ -37,7 +38,7 @@ data = getData(filename)
 # Iterate Entire Dataset
 if NUM == 0:
     NUM = len(data)
-
+"""
 # Fetch GPT Response
 answerAndAnalysis = []
 if(GPT):
@@ -47,15 +48,25 @@ if(GPT):
             response = askGPT(data[i][4])
             parsedResponse = response.split("\n")
 
-            # Extract Answer and Analysis
-            answer = parsedResponse[0] if len(parsedResponse) > 0 else ""
-            analysis = parsedResponse[2] if len(parsedResponse) > 1 else ""
-            
-            # Ensure Answer is not an Error Message
-            if "too many messages in a row" in answer or "ip:" in answer:
-                answerAndAnalysis.append(["Error", "Failed to Retrieve Analysis"])
+            # Safely Extract Suitability, Confidence, and Keyword
+            if len(parsedResponse) >= 3:
+                suitability = parsedResponse[0].strip()  # Extract the first part (Yes/Maybe/No)
+                confidence = parsedResponse[1].strip()   # Extract the second part (0-1 confidence score)
+                keyword = parsedResponse[2].strip()      # Extract the third part (Keyword or phrase)
+                print(f"Processed Abstract {i+1}: Suitability={suitability}, Confidence={confidence}, Keyword={keyword}")
             else:
-                answerAndAnalysis.append([answer, analysis])
+                # Default values for unexpected response formats
+                suitability = "Error"
+                confidence = "0.0"
+                keyword = "Failed to parse GPT response"
+
+            # Ensure Suitability is not an Error Message
+            if "too many messages in a row" in suitability or "ip:" in suitability:
+                answerAndAnalysis.append(["Error", "0.0", "Failed to Retrieve Analysis"])
+            else:
+                answerAndAnalysis.append([suitability, confidence, keyword])
+
+            # time.sleep(1)  # Delay for 1 second
 
         except Exception as e:
             print(f"Error Processing Abstract {i+1}: {str(e)}")
@@ -68,32 +79,34 @@ if(GPT):
         bar = '█' * fill + '-' * (bar - fill)
 
         # Clear Terminal and Print Progress Bar
-        sys.stdout.write("\033[F")
+        # sys.stdout.write("\033[F")
         print(f'Processing: |{bar}| {progress}% Complete')
 
     print("Processing Complete!\n")
 
     # Save Data to CSV File
     saveToCSV(data, answerAndAnalysis, NUM, outputDirectory)
+"""
+def get_embeddings(keywords):
+    model_name = "bert-base-uncased"  # or any other pre-trained model
+    tokenizer = BertTokenizer.from_pretrained(model_name)
+    model = BertModel.from_pretrained(model_name)
 
-# Extract Abstracts from Data
-abstracts = [item[4] for item in data[:NUM]]
+    embeddings = []
+    for keyword in keywords:
+        inputs = tokenizer(keyword, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        outputs = model(**inputs)
+        embedding = outputs.last_hidden_state.mean(dim=1).detach().numpy()
+        embeddings.append(embedding)
 
-# Get Unique Words from Abstracts
-uniqueWords = getWords(abstracts)
-
-# Count Words in Abstracts
-counts = countWords(abstracts, uniqueWords)
-
-# Create Occupancy Matrix
-occupancyMatrix = createOccupancyMatrix(counts)
+    return embeddings
+keywords = [item[4] for item in data[:NUM]]
+print(keywords)
+occupancyMatrix = createOccupancyMatrix(keywords)
 
 if(NUM > 1):
-    # Create Scatter Plot
-    createScatterPlot(occupancyMatrix, data, NUM, outputDirectory)
-
     # Create Similarity Matrix
-    similarityMatrix = createSimilarityMatrix(occupancyMatrix, data, NUM, outputDirectory)
+    similarityMatrix = createSimilarityMatrix(occupancyMatrix, data, NUM)
 
     # Create Dendrogram
     createDendrogram(similarityMatrix, data, NUM, outputDirectory)

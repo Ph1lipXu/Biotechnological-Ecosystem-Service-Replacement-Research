@@ -1,84 +1,64 @@
 # Imports
 import os
-import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from scipy.spatial.distance import pdist, squareform
-from scipy.cluster.hierarchy import linkage, dendrogram
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
-# Create an Occupancy Matrix
-def createOccupancyMatrix(wordCounts):
-    
-    # Create 2D Matrix of Word Counts
-    occupancyMatrix = np.array([list(counts.values()) for counts in wordCounts])
-    
+from scipy.cluster.hierarchy import linkage, dendrogram
+from sklearn.metrics import pairwise_distances
+from sklearn.feature_extraction.text import CountVectorizer
+
+def createOccupancyMatrix(keywords):
+    # Use CountVectorizer to convert summaries to a document-term matrix (DTM)
+    vectorizer = CountVectorizer()
+    occupancyMatrix = vectorizer.fit_transform(keywords).toarray()
     return occupancyMatrix
 
-def createScatterPlot(occupancyMatrix, data, NUM, outputDirectory):
+def createSimilarityMatrix(embeddings, keywords):
+    """
+    Create a semantic similarity matrix based on cosine similarity of embeddings.
 
-    # Scale Data
-    scaler = StandardScaler()
-    scaledData = scaler.fit_transform(occupancyMatrix)
+    Parameters:
+    - embeddings: A list or array of sentence embeddings (e.g., from a transformer model).
+    - keywords: List of keywords (or titles) corresponding to the embeddings, for labeling the matrix.
+    - outputDirectory: Directory where the generated plot will be saved.
 
-    # Perform PCA to reduce the dimensionality for visualization
-    pca = PCA(n_components = 2)
-    pcaResult = pca.fit_transform(scaledData)
-
-    # Create Scatter Plot
-    plt.figure(figsize = (10, 7))
-    plt.scatter(pcaResult[:, 0], pcaResult[:, 1], c = 'blue', marker = 'o')
-
-    # Create Label for Each Point
-    for i, index in enumerate(range(NUM)):
-        plt.text(pcaResult[i, 0], pcaResult[i, 1], f"{data[i][0]}", fontsize = 6)
-    plt.title("Scatter Plot of Article Abstracts Grouped by Word Counts")
-    plt.xlabel("Principal Component 1")
-    plt.ylabel("Principal Component 2")
-    plt.grid(True)
-    
-    # Save the Graph
-    path = os.path.join(outputDirectory, "scatterPlot.png")
-    plt.savefig(path)
-    plt.close()
-
-# Create Similarity Matrix
-def createSimilarityMatrix(occupancyMatrix, data, NUM, outputDirectory):
-
+    Returns:
+    - semantic_similarity: A matrix representing the cosine similarity between the embeddings.
+    """
     # Calculate Cosine Distance and Convert to Similarity
-    cosineDistances = pdist(occupancyMatrix, metric = 'cosine')
-    similarityMatrix = 1 - squareform(cosineDistances)
+    semantic_similarity = 1 - pairwise_distances(embeddings, metric='cosine')
 
-    # Create Similarity Matrix
-    plt.figure(figsize = (10, 6))
-    ax = sns.heatmap(similarityMatrix, annot = True, cmap = "YlGnBu", xticklabels = [f"{data[i][0]}" for i in range(NUM)], yticklabels = [f"{data[i][0]}" for i in range(NUM)], annot_kws = {"size": 6})
-    ax.set_xticklabels(ax.get_xticklabels(), fontsize = 6)
-    ax.set_yticklabels(ax.get_yticklabels(), fontsize = 6)
-    plt.title("Similarity Matrix of Article Abstracts")
+    # Create Similarity Matrix Heatmap
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(semantic_similarity, annot=False, cmap="YlGnBu", xticklabels=keywords, yticklabels=keywords)
+    plt.title("Semantic Similarity Matrix")
+
+    return semantic_similarity
+
+def createDendrogram(semantic_similarity, keywords, suitability_labels, outputDirectory):
+    """
+    Create a dendrogram based on semantic similarity of abstracts.
+
+    Parameters:
+    - semantic_similarity: A matrix representing the cosine similarity between sentence embeddings.
+    - keywords: List of keywords (or titles) corresponding to the abstracts, used for labeling the dendrogram.
+    - suitability_labels: The suitability responses (e.g., "Yes", "Maybe", "No") corresponding to the abstracts.
+    - outputDirectory: Directory where the generated dendrogram will be saved.
+    """
+    # Perform Hierarchical Clustering
+    linkage_matrix = linkage(semantic_similarity, method='ward')
     
-    # Save the Graph
-    path = os.path.join(outputDirectory, "similarityMatrix.png")
-    plt.savefig(path)
-    plt.close()
-
-    return similarityMatrix
-
-# Create Dendrogram
-def createDendrogram(similarityMatrix, data, NUM, outputDirectory):
-
-    # Create Dendrogram Using Hierarchical Clustering
-    linkageMatrix = linkage(similarityMatrix, method = 'ward')
-    plt.figure(figsize = (10, 6))
-    dendrogram(linkageMatrix, labels = [f"{data[i][0]}" for i in range(NUM)])
-    ax = plt.gca()
-    plt.xticks(fontsize = 6)
-    plt.yticks(fontsize = 6)
-    plt.title("Dendrogram of Article Abstracts")
-    plt.xlabel("Article")
+    # Create Dendrogram Plot
+    plt.figure(figsize=(12, 8))
+    dendrogram(linkage_matrix, labels=[f"{keyword} ({answer})" for keyword, answer in zip(keywords, suitability_labels)])
+    
+    # Customize the plot
+    plt.title("Dendrogram of Abstracts Based on Semantic Similarity")
+    plt.xlabel("Abstracts")
     plt.ylabel("Distance")
     
-    # Save the Graph
-    path = os.path.join(outputDirectory, "dendrogram.png")
+    # Save the Dendrogram Plot
+    path = os.path.join(outputDirectory, "dendrogram_updated.png")
     plt.savefig(path)
     plt.close()
