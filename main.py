@@ -7,10 +7,9 @@ from utilities.gpt import askGPT
 from utilities.export import saveToCSV
 from utilities.words import getWords
 from utilities.words import countWords
-from utilities.graphs import createOccupancyMatrix
+from utilities.graphs import createTfidfMatrix
 from utilities.graphs import createDendrogram
 from utilities.graphs import createSimilarityMatrix
-from transformers import BertTokenizer, BertModel
 
 # Supress Warnings
 import warnings
@@ -38,7 +37,7 @@ data = getData(filename)
 # Iterate Entire Dataset
 if NUM == 0:
     NUM = len(data)
-"""
+
 # Fetch GPT Response
 answerAndAnalysis = []
 if(GPT):
@@ -66,7 +65,7 @@ if(GPT):
             else:
                 answerAndAnalysis.append([suitability, confidence, keyword])
 
-            # time.sleep(1)  # Delay for 1 second
+            time.sleep(2)  # Delay for 2 second
 
         except Exception as e:
             print(f"Error Processing Abstract {i+1}: {str(e)}")
@@ -86,27 +85,22 @@ if(GPT):
 
     # Save Data to CSV File
     saveToCSV(data, answerAndAnalysis, NUM, outputDirectory)
-"""
-def get_embeddings(keywords):
-    model_name = "bert-base-uncased"  # or any other pre-trained model
-    tokenizer = BertTokenizer.from_pretrained(model_name)
-    model = BertModel.from_pretrained(model_name)
 
-    embeddings = []
-    for keyword in keywords:
-        inputs = tokenizer(keyword, return_tensors="pt", padding=True, truncation=True, max_length=512)
-        outputs = model(**inputs)
-        embedding = outputs.last_hidden_state.mean(dim=1).detach().numpy()
-        embeddings.append(embedding)
+keywords = [item[2] for item in answerAndAnalysis[:NUM]]
+suitability_labels = [item[0] for item in answerAndAnalysis[:NUM]]
 
-    return embeddings
-keywords = [item[4] for item in data[:NUM]]
-print(keywords)
-occupancyMatrix = createOccupancyMatrix(keywords)
+def shorten_labels(keywords, max_length=50):
+    return [keyword[:max_length] + "..." if len(keyword) > max_length else keyword for keyword in keywords]
 
-if(NUM > 1):
+# Shorten labels for better visualization
+shortened_keywords = shorten_labels(keywords)
+
+if NUM > 1:
+    # Create TF-IDF Matrix
+    tfidf_matrix = createTfidfMatrix(keywords)
+        
     # Create Similarity Matrix
-    similarityMatrix = createSimilarityMatrix(occupancyMatrix, data, NUM)
-
+    similarityMatrix = createSimilarityMatrix(tfidf_matrix, shortened_keywords)
+        
     # Create Dendrogram
-    createDendrogram(similarityMatrix, data, NUM, outputDirectory)
+    createDendrogram(similarityMatrix, shortened_keywords, suitability_labels, outputDirectory)
