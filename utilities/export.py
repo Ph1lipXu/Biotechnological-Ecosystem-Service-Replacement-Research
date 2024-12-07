@@ -1,4 +1,3 @@
-# Import
 import os
 import csv
 

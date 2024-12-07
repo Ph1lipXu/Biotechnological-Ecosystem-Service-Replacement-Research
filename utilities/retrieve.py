@@ -1,4 +1,3 @@
-# Import
 import pandas as pd
   
 # Get Data from Excel File

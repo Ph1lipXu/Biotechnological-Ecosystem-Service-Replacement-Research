@@ -1,13 +1,10 @@
-# Import
 import os
-import sys
+# import sys
 import time
-import g4f
+# import g4f
 from utilities.retrieve import getData
 from utilities.gpt import askGPT
 from utilities.export import saveToCSV
-from utilities.words import getWords
-from utilities.words import countWords
 from utilities.graphs import createTfidfMatrix
 from utilities.graphs import createDendrogram
 from utilities.graphs import createSimilarityMatrix
